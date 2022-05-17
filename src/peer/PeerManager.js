@@ -1,72 +1,105 @@
-import io from "socket.io-client";
-
 class PeerManager {
-  constructor(setMembers, selfId, selfName, closeShareCb, setRemoteStream) {
-    console.log(`Connecting ${selfName}`);
-    this.uid = selfId;
-    this.name = selfName;
-    this.socket = io("ws://localhost:4000", {
-      query: {
-        uid: this.uid,
-        name: this.name
-      }
-    });
-    this.recvPeer = new window.SimplePeer();
-    this.initPeer = {};
-    this.isSharing = false;
-    this.isRecv = false;
+  constructor(
+    socket,
+    setMembers,
+    selfId,
+    setRemoteStream,
+    setAppStatus,
+    appStatusRef
+  ) {
+    console.log(`Connecting ${selfId}`);
+    this.socket = socket;
     this.selfId = selfId;
-    this.recvPeer.on("signal", data => {
-      this.isRecv = true;
-      this.socket.emit("answer", { mid: this.selfId, payload: data });
-    });
-    this.socket.on("offer", ({ mid, payload }) => {
-      if (this.isSharing) {
-        closeShareCb();
-      }
-      this.isSharing = false;
-      Object.keys(this.initPeer).forEach(mid => {
-        this.initPeer[mid].destroy();
-        delete this.initPeer[mid];
+    this.initPeer = {};
+    this.recvPeer = null;
+    this.memberMap = {};
+    this.lastSharedStream = null;
+    this.setAppStatus = setAppStatus;
+    this.appStatusRef = appStatusRef;
+    const createRecvPeer = () => {
+      const recvPeer = new window.SimplePeer({ trickle: false });
+      recvPeer.on("signal", data => {
+        this.setAppStatus({ sharing: false, recv: true });
+        this.socket.emit("answer", { mid: this.selfId, payload: data });
+        console.log("Sent answer:", data);
       });
-      this.recvPeer.signal(payload);
-    });
-    this.recvPeer.on("stream", stream => {
-      // got remote video stream, now let's show it in a video tag
-      console.log("got stream", stream);
-      setRemoteStream(stream);
+      recvPeer.on("stream", stream => {
+        // got remote video stream, now let's show it in a video tag
+        console.log("Received stream:", stream);
+        setRemoteStream(stream);
+      });
+      recvPeer.on("close", () => {
+        this.setAppStatus(status => {
+          return { ...status, recv: false };
+        });
+      });
+      return recvPeer;
+    };
+    this.socket.on("offer", ({ mid, payload }) => {
+      if (mid === this.selfId) {
+        this.recvPeer = createRecvPeer();
+        console.log("Received offer:", payload);
+        Object.keys(this.initPeer).forEach(mid => {
+          this.initPeer[mid].destroy();
+          delete this.initPeer[mid];
+        });
+        this.recvPeer.signal(payload);
+      }
     });
     this.socket.on("member_update", memberMap => {
+      console.log("Received member update:", memberMap);
       setMembers(memberMap);
+      const oldMemberMap = this.memberMap;
+      this.memberMap = memberMap;
+      if (this.appStatusRef.current.sharing) {
+        for (let id in oldMemberMap) {
+          if (!(id in this.memberMap) && id !== this.selfId) {
+            this.initPeer[id].destroy();
+            delete this.initPeer[id];
+          }
+        }
+        for (let id in this.memberMap) {
+          if (!(id in oldMemberMap) && id !== this.selfId) {
+            this.addPeer(id, this.lastSharedStream);
+          }
+        }
+      }
     });
     this.socket.on("answer", ({ mid, payload }) => {
-      this.initPeer[mid].signal(payload);
+      if (this.appStatusRef.current.sharing) {
+        console.log("Received answer from mid:", mid, "payload:", payload);
+        this.initPeer[mid].signal(payload);
+      }
+    });
+  }
+  addPeer(mid, stream) {
+    this.initPeer[mid] = new window.SimplePeer({
+      initiator: true,
+      stream: stream,
+      trickle: false
+    });
+    this.initPeer[mid].on("signal", data => {
+      console.log("Sending offer to mid:", mid, "payload:", data);
+      this.socket.emit("offer", { mid: mid, payload: data });
     });
   }
   share(members, stream) {
-    if (this.isRecv) {
-      this.recvPeer.destroy();
-    }
     Object.keys(members).forEach(mid => {
       if (mid !== this.selfId) {
-        this.initPeer[mid] = new window.SimplePeer({
-          initiator: true,
-          stream: stream
-        });
-        this.initPeer[mid].on("signal", data => {
-          this.socket.emit("offer", { mid: mid, payload: data });
-        });
+        this.addPeer(mid, stream);
       }
     });
-    this.isRecv = false;
-    this.isSharing = true;
+    this.lastSharedStream = stream;
+    this.setAppStatus({ sharing: true, recv: false });
   }
   stopSharing() {
     Object.keys(this.initPeer).forEach(mid => {
       this.initPeer[mid].destroy();
       delete this.initPeer[mid];
     });
-    this.isSharing = false;
+    this.setAppStatus(status => {
+      return { ...status, sharing: false };
+    });
   }
 }
 
