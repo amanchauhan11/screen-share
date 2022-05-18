@@ -1,70 +1,35 @@
-# Getting Started with Create React App
+# Screen Share
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A screen sharing app built to test webrtc capabilities. UX is similar to other conferencing apps like Meet/Teams, except only screen sharing is available. Multiple users can join and share screen at any point. Only a single meeting room is available and all users will join the same meeting. 
 
-## Available Scripts
+<img src=https://user-images.githubusercontent.com/28217026/169112806-401825a6-7392-44f9-b0dc-548add37e8a9.png />
 
-In the project directory, you can run:
+## How to run?
 
-### `npm start`
+### Run server
+Clone nodejs [server](https://github.com/amanchauhan11/screen-share-server) and run  
+```
+node index.js
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Launch the app
+To serve development version  
+```
+npm start
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+To create prod build  
+```
+npm run build
+```
 
-### `npm test`
+## How does it work?
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The app creates peer to peer connections between different users using webrtc. The [server]([url](https://github.com/amanchauhan11/screen-share-server)) handles messaging to create webrtc connections using [SocketIO](https://socket.io/docs/v4/). 
+If there are N users and a user is presenting, the presenting user has to create N peer to peer connections, one for each other user. Since connections are O(n), scalability might be an issue. 
+The raw webrtc api is a bit complicated, so we use this [wrapper](https://github.com/feross/simple-peer) library.
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## TODO
+1. Video or voice sharing.
+2. Meeting rooms.
+3. Peer connections scalability
