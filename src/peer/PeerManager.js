@@ -5,6 +5,7 @@ class PeerManager {
     selfId,
     setRemoteStream,
     setAppStatus,
+    setPresId,
     appStatusRef
   ) {
     console.log(`Connecting ${selfId}`);
@@ -15,6 +16,7 @@ class PeerManager {
     this.memberMap = {};
     this.lastSharedStream = null;
     this.setAppStatus = setAppStatus;
+    this.setPresId = setPresId;
     this.appStatusRef = appStatusRef;
     const createRecvPeer = () => {
       const recvPeer = new window.SimplePeer({ trickle: false });
@@ -35,7 +37,7 @@ class PeerManager {
       });
       return recvPeer;
     };
-    this.socket.on("offer", ({ mid, payload }) => {
+    this.socket.on("offer", ({ mid, payload, presenterId }) => {
       if (mid === this.selfId) {
         this.recvPeer = createRecvPeer();
         console.log("Received offer:", payload);
@@ -44,6 +46,7 @@ class PeerManager {
           delete this.initPeer[mid];
         });
         this.recvPeer.signal(payload);
+        this.setPresId(presenterId);
       }
     });
     this.socket.on("member_update", memberMap => {
@@ -80,7 +83,11 @@ class PeerManager {
     });
     this.initPeer[mid].on("signal", data => {
       console.log("Sending offer to mid:", mid, "payload:", data);
-      this.socket.emit("offer", { mid: mid, payload: data });
+      this.socket.emit("offer", {
+        mid: mid,
+        payload: data,
+        presenterId: this.selfId
+      });
     });
   }
   share(members, stream) {
@@ -91,6 +98,7 @@ class PeerManager {
     });
     this.lastSharedStream = stream;
     this.setAppStatus({ sharing: true, recv: false });
+    this.setPresId(this.selfId);
   }
   stopSharing() {
     Object.keys(this.initPeer).forEach(mid => {

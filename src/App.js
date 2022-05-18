@@ -26,6 +26,7 @@ function App() {
   const [members, setMembers] = useState({});
   const [appStatus, setAppStatus] = useState({ sharing: false, recv: false });
   const [remoteStream, setRemoteStream] = useState(null);
+  const [presId, setPresId] = useState(null);
   const appStatusRef = useRef();
   appStatusRef.current = appStatus;
   const peerManager = useMemo(
@@ -36,6 +37,7 @@ function App() {
         userInfo.uid,
         setRemoteStream,
         setAppStatus,
+        setPresId,
         appStatusRef
       ),
     []
@@ -46,6 +48,7 @@ function App() {
       remoteStream={remoteStream}
       appStatus={appStatus}
       peerManager={peerManager}
+      presenterId={presId}
     />
   );
 }

@@ -15,7 +15,13 @@ const ScreenShareControl = styled(IconButton)(() => ({
   left: "50%"
 }));
 
-const ScreenShare = ({ members, remoteStream, appStatus, peerManager }) => {
+const ScreenShare = ({
+  members,
+  remoteStream,
+  appStatus,
+  peerManager,
+  presenterId
+}) => {
   const [videoStream, setVideoStream] = useState(null);
   const videoElement = useRef();
   useEffect(() => {
@@ -92,7 +98,13 @@ const ScreenShare = ({ members, remoteStream, appStatus, peerManager }) => {
             <List sx={{ padding: "0px" }}>
               <MemberBox mid="default" name="Participants"></MemberBox>
               {Object.keys(members).map(mid => (
-                <MemberBox key={mid} name={members[mid]}></MemberBox>
+                <MemberBox
+                  key={mid}
+                  name={members[mid]}
+                  presenting={
+                    (appStatus.sharing || appStatus.recv) && mid === presenterId
+                  }
+                ></MemberBox>
               ))}
             </List>
           </Paper>
